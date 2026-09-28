@@ -15,8 +15,9 @@ export const WorkflowBreadcrumb: React.FC = () => {
     { id: 'processing', label: '1. Ingestion & Pipeline', sublabel: 'L1 GRD Calibration' },
     { id: 'spill-detection', label: '2. Spill Detection', sublabel: '18.7 km² Segmentation' },
     { id: 'incident-analysis', label: '3. Drift & Origin', sublabel: 'Lagrangian Backtrack' },
-    { id: 'vessel-attribution', label: '4. Vessel Attribution', sublabel: 'AIS Matrix & CFAR' },
-    { id: 'report', label: '5. Investigation Dossier', sublabel: 'Actionable Intelligence' },
+    { id: 'spill-forecast', label: '4. Spread Forecast', sublabel: 'Forward Trajectory' },
+    { id: 'vessel-attribution', label: '5. Vessel Attribution', sublabel: 'AIS Matrix & CFAR' },
+    { id: 'report', label: '6. Investigation Dossier', sublabel: 'Actionable Intelligence' },
   ];
 
   const currentStepIndex = steps.findIndex(s => s.id === activePage);

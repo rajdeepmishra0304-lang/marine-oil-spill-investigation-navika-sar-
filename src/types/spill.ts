@@ -44,3 +44,40 @@ export interface MetoceanConditions {
   };
   driftParticles: LagrangianParticle[];
 }
+
+export interface ForecastZone {
+  id: string;
+  label: string; // e.g. '6h High Probability'
+  probabilityPercent: number; // 0-100
+  tier: 'high' | 'medium' | 'low'; // probability tier
+  timestepHours: number; // +6, +12, +24, +48
+  centerCoordinates: [number, number]; // [lat, lng]
+  radiusKm: number; // spread radius for this zone
+  areaKm2: number;
+}
+
+export interface ForecastParticle {
+  id: number;
+  timestepHours: number; // +6, +12, +24, +48
+  timestamp: string;
+  lat: number;
+  lng: number;
+  spreadRadiusKm: number;
+  probabilityPercent: number;
+}
+
+export interface SpillForecast {
+  generatedAt: string;
+  modelName: string;
+  originCenter: [number, number]; // starting point (= current spill detection center)
+  forecastHorizons: number[]; // [6, 12, 24, 48]
+  particles: ForecastParticle[];
+  zones: ForecastZone[];
+  estimatedTotalAreaKm2At48h: number;
+  dominantDriftDirection: string; // e.g. 'ENE (067°)'
+  environmentalHazards: {
+    label: string;
+    distance: string;
+    risk: 'critical' | 'high' | 'moderate';
+  }[];
+}

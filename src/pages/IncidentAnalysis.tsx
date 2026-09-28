@@ -39,13 +39,23 @@ export const IncidentAnalysis: React.FC = () => {
           </p>
         </div>
 
-        <button
-          className="btn btn-primary btn-lg"
-          onClick={() => setActivePage('vessel-attribution')}
-        >
-          <span>Correlate AIS Vessel Trajectories</span>
-          <ArrowRight size={16} />
-        </button>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            className="btn btn-secondary"
+            onClick={() => setActivePage('spill-forecast')}
+          >
+            <TrendingDown size={15} />
+            <span>View Spread Forecast</span>
+            <ArrowRight size={14} />
+          </button>
+          <button
+            className="btn btn-primary btn-lg"
+            onClick={() => setActivePage('vessel-attribution')}
+          >
+            <span>Correlate AIS Vessel Trajectories</span>
+            <ArrowRight size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Uncertainty & Window Metrics */}

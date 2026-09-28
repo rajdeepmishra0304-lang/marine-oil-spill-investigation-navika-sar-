@@ -7,9 +7,11 @@ export type NavigationPage =
   | 'new-investigation' 
   | 'processing' 
   | 'spill-detection' 
-  | 'incident-analysis' 
+  | 'incident-analysis'
+  | 'spill-forecast'
   | 'vessel-attribution' 
   | 'report';
+
 
 interface InvestigationContextType {
   activeCase: InvestigationCase;

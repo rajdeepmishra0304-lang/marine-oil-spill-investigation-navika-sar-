@@ -1,14 +1,17 @@
 import { InvestigationCase, AOIDefinition, SensorConfig } from '../types/investigation';
-import { SpillFeature, MetoceanConditions } from '../types/spill';
+import { SpillFeature, MetoceanConditions, SpillForecast } from '../types/spill';
+
 import { CandidateVessel } from '../types/vessel';
 import { SARContact } from '../types/contact';
 import { InvestigationReportData } from '../types/evidence';
 import { MOCK_CASES } from '../data/mockCases';
 import { MOCK_SPILL_IND_0261 } from '../data/mockSpill';
 import { MOCK_METOCEAN_IND_0261 } from '../data/mockMetocean';
+import { MOCK_FORECAST_IND_0261 } from '../data/mockForecast';
 import { MOCK_VESSELS_IND_0261 } from '../data/mockVessels';
 import { MOCK_CONTACTS_IND_0261 } from '../data/mockContacts';
 import { INITIAL_PIPELINE_STAGES } from '../data/mockProcessing';
+
 
 class MockInvestigationService {
   private cases: InvestigationCase[] = [...MOCK_CASES];
@@ -80,6 +83,10 @@ class MockInvestigationService {
 
   public getMetoceanData(_caseId: string): MetoceanConditions {
     return MOCK_METOCEAN_IND_0261;
+  }
+
+  public getForecastData(_caseId: string): SpillForecast {
+    return MOCK_FORECAST_IND_0261;
   }
 
   public getCandidateVessels(_caseId: string): CandidateVessel[] {

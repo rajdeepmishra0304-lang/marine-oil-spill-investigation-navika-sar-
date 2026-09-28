@@ -1,13 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { Layers, Eye, Crosshair, Ship, Wind } from 'lucide-react';
-import { SpillFeature, MetoceanConditions } from '../../types/spill';
+import { SpillFeature, MetoceanConditions, SpillForecast, ForecastZone } from '../../types/spill';
 import { CandidateVessel } from '../../types/vessel';
 import { SARContact } from '../../types/contact';
+
 
 interface MaritimeMapProps {
   spill?: SpillFeature;
   metocean?: MetoceanConditions;
+  forecast?: SpillForecast;
   vessels?: CandidateVessel[];
   unmatchedContacts?: SARContact[];
   selectedVesselId?: string;
@@ -15,12 +17,15 @@ interface MaritimeMapProps {
   showBacktrack?: boolean;
   showVessels?: boolean;
   showContacts?: boolean;
+  showForecast?: boolean;
   height?: string;
 }
+
 
 export const MaritimeMap: React.FC<MaritimeMapProps> = ({
   spill,
   metocean,
+  forecast,
   vessels = [],
   unmatchedContacts = [],
   selectedVesselId,
@@ -28,6 +33,7 @@ export const MaritimeMap: React.FC<MaritimeMapProps> = ({
   showBacktrack = true,
   showVessels = true,
   showContacts = true,
+  showForecast = false,
   height = '580px'
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -39,8 +45,13 @@ export const MaritimeMap: React.FC<MaritimeMapProps> = ({
     originEllipse: true,
     driftParticles: showBacktrack,
     aisTracks: showVessels,
-    darkContacts: showContacts
+    darkContacts: showContacts,
+    forecastZones: showForecast,
   });
+
+  // Selected forecast horizon for map display
+  const [activeForecastHorizon, setActiveForecastHorizon] = useState<number>(24);
+
 
   // Initialize Map
   useEffect(() => {
@@ -265,7 +276,65 @@ export const MaritimeMap: React.FC<MaritimeMapProps> = ({
       });
     }
 
-  }, [spill, metocean, vessels, unmatchedContacts, selectedVesselId, layersVisible]);
+    // 6. Draw Forward Forecast Probability Zones
+    if (forecast && layersVisible.forecastZones) {
+      const horizonZones = forecast.zones.filter(z => z.timestepHours === activeForecastHorizon);
+
+      // Color map by tier
+      const tierColors: Record<ForecastZone['tier'], { stroke: string; fill: string; opacity: number }> = {
+        high:   { stroke: '#10B981', fill: '#10B981', opacity: 0.22 },
+        medium: { stroke: '#F59E0B', fill: '#F59E0B', opacity: 0.14 },
+        low:    { stroke: '#38BDF8', fill: '#38BDF8', opacity: 0.07 },
+      };
+
+      // Draw from outermost (low) → innermost (high) so high sits on top
+      [...horizonZones].reverse().forEach(zone => {
+        const colors = tierColors[zone.tier];
+        const zoneCircle = L.circle(zone.centerCoordinates, {
+          radius: zone.radiusKm * 1000,
+          color: colors.stroke,
+          weight: zone.tier === 'high' ? 2 : 1,
+          dashArray: zone.tier === 'low' ? '4, 8' : zone.tier === 'medium' ? '6, 5' : undefined,
+          fillColor: colors.fill,
+          fillOpacity: colors.opacity
+        }).bindTooltip(
+          `<b>🌊 ${zone.label}</b><br/>Probability: <strong>${zone.probabilityPercent}%</strong><br/>Spread Radius: ${zone.radiusKm} km<br/>Coverage Area: ${zone.areaKm2.toLocaleString()} km²`,
+          { permanent: false, direction: 'right', className: 'map-custom-tooltip' }
+        );
+        layerGroup.addLayer(zoneCircle);
+      });
+
+      // Draw forward drift track
+      const fwdParticles = forecast.particles.filter(p => p.timestepHours <= activeForecastHorizon);
+      const fwdLatLngs = fwdParticles.map(p => [p.lat, p.lng] as [number, number]);
+      if (fwdLatLngs.length > 1) {
+        const fwdLine = L.polyline(fwdLatLngs, {
+          color: '#10B981',
+          weight: 2,
+          dashArray: '6, 4',
+          opacity: 0.9
+        });
+        layerGroup.addLayer(fwdLine);
+      }
+
+      // Draw forecast centroid nodes
+      fwdParticles.forEach(p => {
+        const pMarker = L.circleMarker([p.lat, p.lng], {
+          radius: p.timestepHours === 0 ? 6 : 5,
+          color: '#10B981',
+          fillColor: p.timestepHours === activeForecastHorizon ? '#10B981' : '#090D14',
+          fillOpacity: p.timestepHours === activeForecastHorizon ? 0.9 : 0.8,
+          weight: 2
+        }).bindTooltip(
+          `<b>Forecast Node T+${p.timestepHours}h</b><br/>${p.timestamp}<br/>Probability: ${p.probabilityPercent}%<br/>Spread Radius: ±${p.spreadRadiusKm} km`,
+          { permanent: false }
+        );
+        layerGroup.addLayer(pMarker);
+      });
+    }
+
+  }, [spill, metocean, forecast, vessels, unmatchedContacts, selectedVesselId, layersVisible, activeForecastHorizon]);
+
 
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
@@ -339,6 +408,47 @@ export const MaritimeMap: React.FC<MaritimeMapProps> = ({
           />
           <span style={{ color: '#EF4444' }}>✛</span> Unmatched Contact (#SAR-017)
         </label>
+
+        {forecast && (
+          <>
+            <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: '4px', paddingTop: '4px', fontSize: '10px', color: 'var(--accent-emerald)', fontWeight: 600, textTransform: 'uppercase' }}>
+              🌊 Forecast Spread
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--text-primary)' }}>
+              <input
+                type="checkbox"
+                checked={layersVisible.forecastZones}
+                onChange={(e) => setLayersVisible({ ...layersVisible, forecastZones: e.target.checked })}
+                style={{ accentColor: '#10B981' }}
+              />
+              <span style={{ color: '#10B981' }}>◎</span> Probability Zones
+            </label>
+            {layersVisible.forecastZones && (
+              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '2px' }}>
+                {forecast.forecastHorizons.map(h => (
+                  <button
+                    key={h}
+                    onClick={() => setActiveForecastHorizon(h)}
+                    style={{
+                      padding: '2px 6px',
+                      fontSize: '10px',
+                      fontFamily: 'monospace',
+                      backgroundColor: activeForecastHorizon === h ? '#10B981' : 'var(--bg-card-muted)',
+                      color: activeForecastHorizon === h ? '#090D14' : 'var(--text-secondary)',
+                      border: '1px solid ' + (activeForecastHorizon === h ? '#10B981' : 'var(--border-medium)'),
+                      borderRadius: '3px',
+                      cursor: 'pointer',
+                      fontWeight: activeForecastHorizon === h ? 700 : 400
+                    }}
+                  >
+                    T+{h}h
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
       </div>
 
       {/* Map Element */}
